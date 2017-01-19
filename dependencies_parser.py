@@ -23,9 +23,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import glob
+import json
+
+FILES_EXTENSION_LIST = ['.py']
+
 UNDEFINED = -1
 PYTHON    = 0
 
+CLASS_ID  = 0
 
 def detectLanguage(pathToFile):
     """
@@ -38,17 +45,13 @@ def detectLanguage(pathToFile):
         language - The language used in the file
     """
 
-    pathList  = pathToFile.split('.')
-
     try:
-        assert len(pathList) > 0
+        assert isinstance(pathToFile, str)
 
     except AssertionError:
         return UNDEFINED
 
-    extension = pathList[-1]
-
-    if extension == 'py':
+    if pathToFile.endswith('.py'):
         return PYTHON
 
     else:
@@ -69,8 +72,14 @@ def readFile(pathToFile):
 
     content = list()
 
-    with open(pathToFile, 'r') as codeFile:
-        content = codeFile.readlines()
+    try:
+        assert detectLanguage(pathToFile) != UNDEFINED
+
+        with open(pathToFile, 'r') as codeFile:
+            content = codeFile.readlines()
+
+    except AssertionError:
+        pass
 
     return content
 
@@ -88,16 +97,33 @@ def exctractPythonClasses(pythonCode):
         the file
     """
 
-    classesList = list()
+    global CLASS_ID
+
+    classesList       = list()
+    isShortCommentary = False
+    isLongCommentary  = False
 
     for line in pythonCode:
+        if len(line.split('#')) > 1:
+            isShortCommentary = True
+        else:
+            isShortCommentary = False
+
+        if len(line.split('"""')) > 1\
+        or len(line.split("'''")) > 1:
+            isLongCommentary = not isLongCommentary
+
+        if isShortCommentary or isLongCommentary:
+            continue
+
         splittedLine = line.split('class ')
 
         if len(splittedLine) > 1:
             splittedLine = splittedLine[-1]
             className    = splittedLine.split(':')[0]
-
-            classesList.append(className)
+            classDict    = {"id":CLASS_ID, "value":1, "label":className}
+            CLASS_ID     += 1
+            classesList.append(classDict)
 
     return classesList
 
@@ -105,7 +131,8 @@ def exctractPythonClasses(pythonCode):
 
 def extractProjectClasses(filePathList):
     """
-    Extract the classes from the code files of the project
+    Extract the classes from the code files of the project. Computes the nodes
+    of the futur display
 
     Parameters:
         filePathList - The list of file paths
@@ -140,11 +167,67 @@ def extractProjectClasses(filePathList):
 
 
 
+def extractProjectDependencies(filePathList):
+    """
+    Extract the dependencies of the project. Compute the values of the nodes and
+    the edges of the futur display
+
+    Parameters:
+        filePathList - The list of file paths
+    """
+
+
+
+def getProjectFiles(projectFolderPath):
+    """
+    Gets the file of a project
+
+    Parameters:
+        projectFolderPath - The path of the folder of the project
+
+    Returns:
+        projectFiles - The source files of the project
+    """
+
+    projectFiles = list()
+
+    for path, subdirs, files in os.walk(projectFolderPath):
+        for name in files:
+            filePath         = os.path.join(path, name)
+            _, fileExtension = os.path.splitext(filePath)
+
+            if fileExtension in FILES_EXTENSION_LIST:
+                projectFiles.append(filePath)
+
+    return projectFiles
+
+
+
+def dumpJson(dictionnary):
+    """
+    Dumps the data into a json
+
+    Parameters:
+        dictionnary - The dictionnary correpsonding to the data to be written in
+        the JSON
+    """
+
+    with open('ressources/data.json', 'w') as jsonFile:
+        json.dump(dictionnary, jsonFile)
+
+
+
 
 def main():
-    path     = '/home/mbusy/Documents/apps/Hopias/python_structure/Hopias/brain.py'
+    projectPath  = '../ARIIA'
+    projectFiles = getProjectFiles(projectPath)
+    classesDict  = extractProjectClasses(projectFiles)
 
-    print extractProjectClasses([path])
+    print classesDict
+
+    dataDict = dict()
+    dataDict["nodes"] = classesDict[PYTHON]
+    dumpJson(dataDict)
 
 if __name__ == "__main__":
     main()
