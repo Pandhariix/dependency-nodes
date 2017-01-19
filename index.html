@@ -18,27 +18,40 @@
     }
   </style>
 
-	<div id="data">
-		<script type="text/javascript" src="ressources/data.json"></script>
-	</div>
-
 	<script type="text/javascript" src="node_modules/vis/dist/vis.js"></script>
   <link href="node_modules/vis/dist/vis-network.min.css" rel="stylesheet" type="text/css" />
 
   <script type="text/javascript">
-    var nodes = null;
-    var edges = null;
-    var network = null;
+    var nodes    = null;
+    var edges    = null;
+    var network  = null;
+    var jsonData = null;
 
-		var obj 	  = document.getElementById("data")[0]
+    function loadJSON(callback) {
+      var xobj = new XMLHttpRequest();
+          xobj.overrideMimeType("application/json");
+          xobj.open('GET', 'http://localhost:8000/ressources/data.json', true);
+          xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && xobj.status == "200") {
+              callback(xobj.response);
+            }
+          };
+      xobj.send(null);
+    }
 
+    function display() {
+      loadJSON(function(response) {
+        jsonData = JSON.parse(response);
+        draw(jsonData.nodes, jsonData.edges);
+      });
+    }
 
-    function draw() {
+    function draw(nodes, edges) {
       // create people.
       // value corresponds with the age of the person
 
-			alert(obj)
-
+			console.log(nodes);
+      console.log(edges);
 			// nodes = [
       //   {id: 1,  value: 2,  label: 'Algie' },
       //   {id: 2,  value: 31, label: 'Alston'},
@@ -51,8 +64,6 @@
       //   {id: 9,  value: 30, label: 'Mick'},
       //   {id: 10, value: 18, label: 'Tod'},
       // ];
-
-			nodes = []
 
       // create connections between people
       // value corresponds with the amount of contact between two people
@@ -92,7 +103,7 @@
   </script>
   <script src="../../googleAnalytics.js"></script>
 </head>
-<body onload="draw()">
+<body onload="display()">
 <h1>
   Dependencies graph for the project ...
 </h1>
