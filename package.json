@@ -1,0 +1,15 @@
+{
+  "name": "dependencies_visualizer",
+  "version": "1.0.0",
+  "description": "Dependencies visualizer",
+  "main": "index.js",
+  "dependencies": {
+    "vis": "^4.18.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

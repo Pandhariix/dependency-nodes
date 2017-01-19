@@ -1,0 +1,22 @@
+{
+	"classes" : [
+		"Ariia", "WeatherModule", "WikiScrapper"
+	],
+
+	"Ariia" : {
+		"dependencies" : [
+			"WeatherModule", "WikiScrapper"
+		],
+		"value" : 3
+	},
+
+	"WeatherModule" : {
+		"dependencies" : [],
+		"value" : 1
+	},
+
+		"WikiScrapper" : {
+			"dependencies" : [],
+			"value" : 1
+		}
+}
