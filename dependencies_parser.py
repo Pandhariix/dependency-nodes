@@ -31,9 +31,16 @@ import snakefood.find as snake_finder
 
 FILES_EXTENSION_LIST = ['.py']
 
+# Define the languages
 UNDEFINED = -1
 PYTHON    = 0
 CPP       = 1
+
+# define the object type
+UNDEFINED     = -1
+BASIC_CLASS   = 0
+MOTHER_CLASS  = 1
+NATIVE_MODULE = 2
 
 CLASS_ID  = 0
 
@@ -340,7 +347,7 @@ def computeNodesAndEdges(dependencies):
     global CLASS_ID
 
     nodesBackgroundColorDict = {PYTHON: '#97C2FC'}
-    nodesBorderColorDict     = {"ClassBase": '#2B7CE9'}
+    nodesBorderColorDict     = {BASIC_CLASS: '#2B7CE9'}
     nodesHighlightColorDict  = {PYTHON: {"background": '#D2E5FF'}}
 
     nodes             = list()
@@ -357,7 +364,7 @@ def computeNodesAndEdges(dependencies):
 
             nodeDict["color"]               = dict()
             nodeDict["color"]["background"] = nodesBackgroundColorDict[language]
-            nodeDict["color"]["border"]     = nodesBorderColorDict['ClassBase']
+            nodeDict["color"]["border"]     = nodesBorderColorDict[BASIC_CLASS]
             nodeDict["color"]["highlight"]  = nodesHighlightColorDict[language]
 
             nodes.append(nodeDict)
