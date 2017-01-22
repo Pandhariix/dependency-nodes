@@ -192,15 +192,17 @@ def extractProjectDependencies(classesDict):
         dependencies - The project dependencies as a dictionnary, structured
         like the following example:
 
-        {   'ClassA': [
-                'ClassB',
-                'ClassK'
-            ],
-            'ClassAlpha': [
-                'Class32',
-                'module3'
-            ],
-            ...
+        {   PYTHON: {
+                'ClassA': [
+                        'ClassB',
+                        'ClassK'
+                    ],
+                    'ClassAlpha': [
+                        'Class32',
+                        'module3'
+                    ],
+                    ...
+            }
         }
 
         where ClassA depends on ClassB and classK, ClassAlpha depends on the
@@ -208,6 +210,7 @@ def extractProjectDependencies(classesDict):
     """
 
     dependencies        = dict()
+    dependenciesPython  = dict()
     classModulesDict    = dict()
     classModulesList    = list()
     nonClassModulesList = list()
@@ -278,21 +281,22 @@ def extractProjectDependencies(classesDict):
     for className, modulesDict in classModulesDict.items():
         moduleClassNameConv[modulesDict["classModule"]] = className
 
-    # Compute the dependencies
+    # Compute the python dependencies
     for className, modulesDict in classModulesDict.items():
-        dependencies[className] = list()
+        dependenciesPython[className] = list()
 
         for depModule in modulesDict["dependencyModules"]:
             if depModule in classModulesList:
-                dependencies[className].append(
+                dependenciesPython[className].append(
                     moduleClassNameConv[depModule]
                 )
             else:
-                dependencies[className].append(depModule)
+                dependenciesPython[className].append(depModule)
 
     for nonClassModule in nonClassModulesList:
-        dependencies[nonClassModule] = list()
+        dependenciesPython[nonClassModule] = list()
 
+    dependencies[PYTHON] = dependenciesPython
     return dependencies
 
 
@@ -335,40 +339,49 @@ def computeNodesAndEdges(dependencies):
     """
     global CLASS_ID
 
+    nodesBackgroundColorDict = {PYTHON: '#97C2FC'}
+    nodesBorderColorDict     = {"ClassBase": '#2B7CE9'}
+    nodesHighlightColorDict  = {PYTHON: {"background": '#D2E5FF'}}
+
     nodes             = list()
     edges             = list()
     nodesAndEdgesDict = dict()
 
-    for analysedClass in dependencies.keys():
-        nodeDict = dict()
-        nodeDict["id"]    = CLASS_ID
-        nodeDict["value"] = 4 + len(dependencies[analysedClass])
-        nodeDict["label"] = analysedClass
-        CLASS_ID         += 1
+    for language in dependencies.keys():
+        for analysedClass in dependencies[language].keys():
+            nodeDict = dict()
+            nodeDict["id"]    = CLASS_ID
+            nodeDict["value"] = 4 + len(dependencies[language][analysedClass])
+            nodeDict["label"] = analysedClass
+            CLASS_ID         += 1
 
-        nodes.append(nodeDict)
+            nodeDict["color"]               = dict()
+            nodeDict["color"]["background"] = nodesBackgroundColorDict[language]
+            nodeDict["color"]["border"]     = nodesBorderColorDict['ClassBase']
+            nodeDict["color"]["highlight"]  = nodesHighlightColorDict[language]
 
-    for nodeDict in nodes:
-        for dependencyClass in dependencies[nodeDict["label"]]:
-            dependencyClassId = -1
-            edgeDict          = dict()
+            nodes.append(nodeDict)
 
-            for nodeCheckId in nodes:
-                if nodeCheckId["label"] == dependencyClass:
-                    dependencyClassId = nodeCheckId["id"]
+        for nodeDict in nodes:
+            for dependencyClass in dependencies[language][nodeDict["label"]]:
+                dependencyClassId = -1
+                edgeDict          = dict()
 
-            try:
-                assert dependencyClassId != -1
+                for nodeCheckId in nodes:
+                    if nodeCheckId["label"] == dependencyClass:
+                        dependencyClassId = nodeCheckId["id"]
 
-            except AssertionError:
-                continue
+                try:
+                    assert dependencyClassId != -1
 
-            edgeDict["from"]  = nodeDict["id"]
-            edgeDict["to"]    = dependencyClassId
-            edgeDict["value"] = 2
-            edgeDict["title"] = ""
+                except AssertionError:
+                    continue
 
-            edges.append(edgeDict)
+                edgeDict["from"]  = nodeDict["id"]
+                edgeDict["to"]    = dependencyClassId
+                edgeDict["value"] = 2
+
+                edges.append(edgeDict)
 
     nodesAndEdgesDict["nodes"] = nodes
     nodesAndEdgesDict["edges"] = edges
