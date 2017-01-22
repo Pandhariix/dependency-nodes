@@ -360,6 +360,7 @@ def computeNodesAndEdges(dependencies):
             nodeDict["id"]    = CLASS_ID
             nodeDict["value"] = 4 + len(dependencies[language][analysedClass])
             nodeDict["label"] = analysedClass
+            nodeDict["group"] = language
             CLASS_ID         += 1
 
             nodeDict["color"]               = dict()
