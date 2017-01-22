@@ -26,11 +26,14 @@
 import os
 import glob
 import json
+import inspect
+import snakefood.find as snake_finder
 
 FILES_EXTENSION_LIST = ['.py']
 
 UNDEFINED = -1
 PYTHON    = 0
+CPP       = 1
 
 CLASS_ID  = 0
 
@@ -97,8 +100,6 @@ def exctractPythonClasses(pythonCode):
         the file
     """
 
-    global CLASS_ID
-
     classesList       = list()
     isShortCommentary = False
     isLongCommentary  = False
@@ -121,9 +122,7 @@ def exctractPythonClasses(pythonCode):
         if len(splittedLine) > 1:
             splittedLine = splittedLine[-1]
             className    = splittedLine.split(':')[0]
-            classDict    = {"id":CLASS_ID, "value":1, "label":className}
-            CLASS_ID     += 1
-            classesList.append(classDict)
+            classesList.append(className)
 
     return classesList
 
@@ -138,11 +137,22 @@ def extractProjectClasses(filePathList):
         filePathList - The list of file paths
 
     Returns:
-        classes - Dictionnary of classes in the project, for instance :
-        {PYTHON: ["ClassA, ClassB"], CPP: ["ClassT, ClassM"]}
+        classesDict - Dictionnary of classes in the project, for instance :
+        {   PYTHON: [
+                {"fileClassA&B": ["ClassA", "ClassB"]},
+                {"fileClassE&F": ["ClassE", "ClassF"]}
+            ],
+
+            CPP: [
+                {"fileClassT&M": ["ClassT", "ClassM"]},
+                {"fileClassR&N": ["ClassR", "ClassN"]}
+            ]
+        }
     """
 
-    classes = dict()
+    classes         = dict()
+    classes[PYTHON] = list()
+    classes[CPP]    = list()
 
     for path in filePathList:
         language = detectLanguage(path)
@@ -158,7 +168,9 @@ def extractProjectClasses(filePathList):
             except AssertionError:
                 classes[PYTHON] = list()
 
-            classes[PYTHON].extend(exctractPythonClasses(code))
+            classes[PYTHON].append(
+                {path: exctractPythonClasses(code)}
+            )
 
         else:
             print path + " : language unknown"
@@ -167,14 +179,163 @@ def extractProjectClasses(filePathList):
 
 
 
-def extractProjectDependencies(filePathList):
+def extractProjectDependencies(classesDict):
     """
     Extract the dependencies of the project. Compute the values of the nodes and
     the edges of the futur display
 
     Parameters:
-        filePathList - The list of file paths
+        classesDict - Classes dictionnary computed by method
+        @extractProjectClasses
+
+    Returns:
+        dependencies - The project dependencies as a dictionnary, structured
+        like the following example:
+
+        {   'ClassA': [
+                'ClassB',
+                'ClassK'
+            ],
+            'ClassAlpha': [
+                'Class32',
+                'module3'
+            ],
+            ...
+        }
+
+        where ClassA depends on ClassB and classK, ClassAlpha depends on the
+        Class32 and the module3
     """
+
+    dependencies          = dict()
+    filesDependenciesList = list()
+
+    for classDict in classesDict[PYTHON]:
+        try:
+            assert len(classDict.keys()) == 1
+
+        except AssertionError:
+            print "Several files " + classesDict.keys() + " for classes\
+                declaration " + classesDict.values()
+            continue
+
+        try:
+            assert len(classDict.values()) == 1
+            assert len(classDict.values()[0]) > 0
+
+        except AssertionError:
+            continue
+
+        currentFile    = classDict.keys()[0]
+        currentClasses = classDict.values()[0]
+
+        modulesDependenciesList = list()
+        filesDependenciesList   = snake_finder.find_dependencies(
+            currentFile,
+            verbose=False,
+            process_pragmas=False)[0]
+
+        for dependencyFiles in filesDependenciesList:
+            modulesDependenciesList.append(inspect.getmodulename(
+                dependencyFiles))
+
+        for dependenciesClassDict in classesDict[PYTHON]:
+            try:
+                assert len(dependenciesClassDict.keys()) == 1
+
+            except AssertionError:
+                continue
+
+            currentFileChecked    = dependenciesClassDict.keys()[0]
+            currentModuleChecked  = inspect.getmodulename(currentFileChecked)
+            currentClassesChecked = dependenciesClassDict.values()[0]
+
+            if currentModuleChecked in modulesDependenciesList:
+                for currentClass in currentClasses:
+                    try:
+                        assert isinstance(
+                            dependencies[currentClass],
+                            list)
+
+                    except AssertionError:
+                        dependencies[currentClass] = list()
+
+                    except KeyError:
+                        dependencies[currentClass] = list()
+
+                    try:
+                        assert len(currentClassesChecked) > 0
+                        dependencies[currentClass].extend(
+                            currentClassesChecked)
+
+                    except AssertionError:
+                        dependencies[currentClass].append(
+                            currentModuleChecked)
+
+    #Filter the inits
+    for classRef in dependencies.keys():
+        dependencies[classRef] = [dependency for dependency\
+                                  in dependencies[classRef]\
+                                  if dependency != "__init__"]
+
+    return dependencies
+
+
+
+def computeNodesAndEdges(dependencies):
+    """
+    From the dependencies of the project, compute the nodes and the edges to be
+    displayed
+
+    Parameters:
+        dependencies - The dependencies of the project, for more informations,
+        see @extractProjectDependencies
+
+    Returns:
+        nodesAndEdgesDict - The dict containing the nodes and edges of the
+        project
+    """
+    global CLASS_ID
+
+    nodes             = list()
+    edges             = list()
+    nodesAndEdgesDict = dict()
+
+    for analysedClass in dependencies.keys():
+        nodeDict = dict()
+        nodeDict["id"]    = CLASS_ID
+        nodeDict["value"] = 4 + 2*(1+len(dependencies[analysedClass]))
+        nodeDict["label"] = analysedClass
+        CLASS_ID         += 1
+
+        nodes.append(nodeDict)
+
+    for nodeDict in nodes:
+        for dependencyClass in dependencies[nodeDict["label"]]:
+            dependencyClassId = -1
+            edgeDict          = dict()
+
+            for nodeCheckId in nodes:
+                if nodeCheckId["label"] == dependencyClass:
+                    dependencyClassId = nodeCheckId["id"]
+
+            try:
+                assert dependencyClassId != -1
+
+            except AssertionError:
+                continue
+
+            edgeDict["from"]  = nodeDict["id"]
+            edgeDict["to"]    = dependencyClassId
+            edgeDict["value"] = 2
+            edgeDict["title"] = ""
+
+            edges.append(edgeDict)
+
+    nodesAndEdgesDict["nodes"] = nodes
+    nodesAndEdgesDict["edges"] = edges
+
+    return nodesAndEdgesDict
 
 
 
@@ -217,17 +378,17 @@ def dumpJson(dictionnary):
 
 
 
+# TODO : add specific modules in addition to the classes
+# TODO : compute inheritance
 
 def main():
-    projectPath  = '../ARIIA'
-    projectFiles = getProjectFiles(projectPath)
-    classesDict  = extractProjectClasses(projectFiles)
+    projectPath       = '../ARIIA'
+    projectFiles      = getProjectFiles(projectPath)
+    classesDict       = extractProjectClasses(projectFiles)
+    dependencies      = extractProjectDependencies(classesDict)
+    nodesAndEdgesDict = computeNodesAndEdges(dependencies)
 
-    print classesDict
-
-    dataDict = dict()
-    dataDict["nodes"] = classesDict[PYTHON]
-    dumpJson(dataDict)
+    dumpJson(nodesAndEdgesDict)
 
 if __name__ == "__main__":
     main()
