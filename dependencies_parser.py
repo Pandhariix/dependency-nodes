@@ -207,9 +207,13 @@ def extractProjectDependencies(classesDict):
         Class32 and the module3
     """
 
-    dependencies          = dict()
-    filesDependenciesList = list()
+    dependencies        = dict()
+    classModulesDict    = dict()
+    classModulesList    = list()
+    nonClassModulesList = list()
+    moduleClassNameConv = dict()
 
+    # Fill classModulesDict
     for classDict in classesDict[PYTHON]:
         try:
             assert len(classDict.keys()) == 1
@@ -219,66 +223,100 @@ def extractProjectDependencies(classesDict):
                 declaration " + classesDict.values()
             continue
 
-        try:
-            assert len(classDict.values()) == 1
-            assert len(classDict.values()[0]) > 0
+        pythonClassFile     = classDict.keys()[0]
 
-        except AssertionError:
-            continue
+        pythonClassModule   = convertModuleName(
+            pythonClassFile,
+            inspect.getmodulename(pythonClassFile)
+        )
 
-        currentFile    = classDict.keys()[0]
-        currentClasses = classDict.values()[0]
-
-        modulesDependenciesList = list()
-        filesDependenciesList   = snake_finder.find_dependencies(
-            currentFile,
+        dependencyFilesList = snake_finder.find_dependencies(
+            pythonClassFile,
             verbose=False,
             process_pragmas=False)[0]
 
-        for dependencyFiles in filesDependenciesList:
-            modulesDependenciesList.append(inspect.getmodulename(
-                dependencyFiles))
+        pythonClassDependencyModules = list()
 
-        for dependenciesClassDict in classesDict[PYTHON]:
-            try:
-                assert len(dependenciesClassDict.keys()) == 1
+        for depFile in dependencyFilesList:
+            depModuleName = convertModuleName(
+                depFile,
+                inspect.getmodulename(depFile)
+            )
 
-            except AssertionError:
-                continue
+            if depModuleName is not None:
+                pythonClassDependencyModules.append(depModuleName)
 
-            currentFileChecked    = dependenciesClassDict.keys()[0]
-            currentModuleChecked  = inspect.getmodulename(currentFileChecked)
-            currentClassesChecked = dependenciesClassDict.values()[0]
+        for className in classDict.values()[0]:
+            classModulesDict[className] = {
+                "classModule"      : pythonClassModule,
+                "dependencyModules": pythonClassDependencyModules
+            }
 
-            if currentModuleChecked in modulesDependenciesList:
-                for currentClass in currentClasses:
-                    try:
-                        assert isinstance(
-                            dependencies[currentClass],
-                            list)
+    # Fill class modules list
+    rawClassModulesList = list()
 
-                    except AssertionError:
-                        dependencies[currentClass] = list()
+    for element in classModulesDict.values():
+        rawClassModulesList.append(element["classModule"])
 
-                    except KeyError:
-                        dependencies[currentClass] = list()
+    for classModule in rawClassModulesList:
+        if classModule not in classModulesList:
+            classModulesList.append(classModule)
 
-                    try:
-                        assert len(currentClassesChecked) > 0
-                        dependencies[currentClass].extend(
-                            currentClassesChecked)
+    # Fill non class modules list
+    rawNonClassModulesList = list()
 
-                    except AssertionError:
-                        dependencies[currentClass].append(
-                            currentModuleChecked)
+    for element in classModulesDict.values():
+        for module in element["dependencyModules"]:
+            if module not in classModulesList:
+                rawNonClassModulesList.append(module)
 
-    #Filter the inits
-    for classRef in dependencies.keys():
-        dependencies[classRef] = [dependency for dependency\
-                                  in dependencies[classRef]\
-                                  if dependency != "__init__"]
+    for nonClassModule in rawNonClassModulesList:
+        if nonClassModule not in nonClassModulesList:
+            nonClassModulesList.append(nonClassModule)
+
+    # Fill module classname conversion dict
+    for className, modulesDict in classModulesDict.items():
+        moduleClassNameConv[modulesDict["classModule"]] = className
+
+    # Compute the dependencies
+    for className, modulesDict in classModulesDict.items():
+        dependencies[className] = list()
+
+        for depModule in modulesDict["dependencyModules"]:
+            if depModule in classModulesList:
+                dependencies[className].append(
+                    moduleClassNameConv[depModule]
+                )
+            else:
+                dependencies[className].append(depModule)
+
+    for nonClassModule in nonClassModulesList:
+        dependencies[nonClassModule] = list()
 
     return dependencies
+
+
+
+def convertModuleName(pythonFile, pythonModule):
+    """
+    If the module is "__init__", changes the name of the module to an
+    appropriate name. Warning, if the module name is None, will return None
+
+    Parameters:
+        pythonFile - The python file path corresponding to the module
+        pythonModule - The name of the module
+
+    Returns:
+        pythonModule - The converted name of the module
+    """
+
+    if pythonModule == "__init__":
+        if len(pythonFile.split("/")) > 1:
+            pythonModule = pythonFile.split("/")[-2]
+        elif len(pythonFile.split("\\")) > 1:
+            pythonModule = pythonFile.split("\\")[-2]
+
+    return pythonModule
 
 
 
@@ -304,7 +342,7 @@ def computeNodesAndEdges(dependencies):
     for analysedClass in dependencies.keys():
         nodeDict = dict()
         nodeDict["id"]    = CLASS_ID
-        nodeDict["value"] = 4 + 2*(1+len(dependencies[analysedClass]))
+        nodeDict["value"] = 4 + len(dependencies[analysedClass])
         nodeDict["label"] = analysedClass
         CLASS_ID         += 1
 
