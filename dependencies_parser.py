@@ -37,10 +37,23 @@ PYTHON    = 0
 CPP       = 1
 
 # define the object type
-UNDEFINED     = -1
-BASIC_CLASS   = 0
-MOTHER_CLASS  = 1
-NATIVE_MODULE = 2
+COLORS = {
+    PYTHON: {
+        "nodes": {
+            "background": '#97C2FC',
+            "border"    : {
+                "basic_class"   :'#2B7CE9',
+                "mother_class"  :'#2B7CE9',
+                "unittest_class":'#77E58B',
+                "module"        :'#F7BB7B'
+            },
+            "highlights": {
+                "background": '#D2E5FF'
+            }
+        },
+        "edges": "#2B7CE9"
+    }
+}
 
 CLASS_ID  = 0
 
@@ -203,17 +216,19 @@ def extractProjectDependencies(classesDict):
                 'ClassA': [
                         'ClassB',
                         'ClassK'
-                    ],
-                    'ClassAlpha': [
-                        'Class32',
-                        'module3'
-                    ],
-                    ...
+                ],
+                'ClassAlpha': [
+                    'Class32',
+                    'module3'
+                ],
+                'module3': None,
+                ...
             }
         }
 
         where ClassA depends on ClassB and classK, ClassAlpha depends on the
-        Class32 and the module3
+        Class32 and the module3. The module 3 key in the dict has the value
+        None, to decribe the fact that it is a module
     """
 
     dependencies        = dict()
@@ -301,7 +316,7 @@ def extractProjectDependencies(classesDict):
                 dependenciesPython[className].append(depModule)
 
     for nonClassModule in nonClassModulesList:
-        dependenciesPython[nonClassModule] = list()
+        dependenciesPython[nonClassModule] = None
 
     dependencies[PYTHON] = dependenciesPython
     return dependencies
@@ -346,31 +361,74 @@ def computeNodesAndEdges(dependencies):
     """
     global CLASS_ID
 
-    nodesBackgroundColorDict = {PYTHON: '#97C2FC'}
-    nodesBorderColorDict     = {BASIC_CLASS: '#2B7CE9'}
-    nodesHighlightColorDict  = {PYTHON: {"background": '#D2E5FF'}}
-
     nodes             = list()
     edges             = list()
     nodesAndEdgesDict = dict()
 
     for language in dependencies.keys():
-        for analysedClass in dependencies[language].keys():
-            nodeDict = dict()
+        for className in dependencies[language].keys():
+            nodeDict          = dict()
+            nodeDict["color"] = dict()
             nodeDict["id"]    = CLASS_ID
-            nodeDict["value"] = 4 + len(dependencies[language][analysedClass])
-            nodeDict["label"] = analysedClass
             nodeDict["group"] = language
             CLASS_ID         += 1
 
-            nodeDict["color"]               = dict()
-            nodeDict["color"]["background"] = nodesBackgroundColorDict[language]
-            nodeDict["color"]["border"]     = nodesBorderColorDict[BASIC_CLASS]
-            nodeDict["color"]["highlight"]  = nodesHighlightColorDict[language]
+
+            nodeDict["color"]["background"] = COLORS[language]\
+                                                    ["nodes"]\
+                                                    ["background"]
+
+            nodeDict["color"]["highlight"]  = COLORS[language]\
+                                                    ["nodes"]\
+                                                    ["highlights"]\
+                                                    ["background"]
+
+            # Analyse the class name to know if it is a module
+            if dependencies[language][className] is None:
+                nodeDict["value"]           = 4
+                nodeDict["color"]["border"] = COLORS[language]\
+                                                    ["nodes"]\
+                                                    ["border"]\
+                                                    ["module"]
+
+            # Analyse the class name and clean it if there is a () in the name
+            else:
+                nodeDict["value"] = 4 + len(dependencies[language][className])
+
+                if len(className.split("(")) > 1:
+                    # Test if unittest or regular class
+                    if len(className.split("TestCase)")) > 1:
+                        nodeDict["color"]["border"] = COLORS[language]\
+                                                            ["nodes"]\
+                                                            ["border"]\
+                                                            ["unittest_class"]
+
+                    else:
+                        nodeDict["color"]["border"] = COLORS[language]\
+                                                            ["nodes"]\
+                                                            ["border"]\
+                                                            ["basic_class"]
+
+                # Standard basic class
+                else:
+                    nodeDict["color"]["border"] = COLORS[language]\
+                                                        ["nodes"]\
+                                                        ["border"]\
+                                                        ["basic_class"]
+
+            nodeDict["label"] = className
 
             nodes.append(nodeDict)
 
         for nodeDict in nodes:
+
+            # Verify if not a module
+            try:
+                assert dependencies[language][nodeDict["label"]] is not None
+
+            except AssertionError:
+                continue
+
             for dependencyClass in dependencies[language][nodeDict["label"]]:
                 dependencyClassId = -1
                 edgeDict          = dict()
@@ -388,9 +446,16 @@ def computeNodesAndEdges(dependencies):
                 edgeDict["from"]  = nodeDict["id"]
                 edgeDict["to"]    = dependencyClassId
                 edgeDict["value"] = 2
+                edgeDict["color"] = COLORS[language]["edges"]
 
                 edges.append(edgeDict)
 
+    # Clean class name if parenthesis inside
+    for i in range(len(nodes)):
+        if len(nodes[i]["label"].split("(")) > 1:
+            nodes[i]["label"] = nodes[i]["label"].split("(")[0]
+
+    # Compute final dict, to be dumped in JSON
     nodesAndEdgesDict["nodes"] = nodes
     nodesAndEdgesDict["edges"] = edges
 

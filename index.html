@@ -1,30 +1,58 @@
+<!--
+
+MIT License
+
+Copyright (c) 2017 Maxime Busy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-->
 
 <!doctype html>
 <html>
 <head>
   <title>Dependencies</title>
 
+
   <style type="text/css">
     html, body {
-      font: 10pt arial;
-      background-color: #222222;
+        font: 10pt arial;
+        background-color: #222222;
     }
     h1{
-      color: #ffffff;
+        color: #ffffff;
     }
     #mynetwork {
-			height: 100%;
-	    width: 100%;
-	    left: 0;
-	    top: 0;
-	    overflow: hidden;
-	    position: fixed;
-      background-color: #222222;
+        height: 100%;
+	      width: 100%;
+        top: 0;
+	      left: 0;
+	      overflow: hidden;
+	      position: fixed;
+        background-color: #222222;
     }
   </style>
 
+
 	<script type="text/javascript" src="node_modules/vis/dist/vis.js"></script>
   <link href="node_modules/vis/dist/vis-network.min.css" rel="stylesheet" type="text/css" />
+
 
   <script type="text/javascript">
     var nodes    = null;
@@ -60,11 +88,16 @@
 
       // Instantiate our network object.
       var container = document.getElementById('mynetwork');
+
       var data = {
         nodes: nodes,
         edges: edges
       };
+
       var options = {
+        physics: {
+          stabilization: false
+        },
         nodes: {
           shape: 'dot',
           font: {
@@ -72,12 +105,19 @@
           },
           scaling:{
             label: {
-              min:8,
+              min:14,
               max:30
             }
+          },
+          borderWidth: 4
+        },
+        "edges": {
+          "smooth": {
+            "forceDirection": "none"
           }
         }
       };
+
       network = new vis.Network(container, data, options);
     }
   </script>
