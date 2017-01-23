@@ -24,6 +24,7 @@
 # SOFTWARE.
 
 import os
+import sys
 import glob
 import json
 import inspect
@@ -555,7 +556,17 @@ def dumpJson(dictionnary):
 # TODO : compute inheritance
 
 def main():
-    projectPath       = '../apps/Hopias/python_structure/Hopias'
+
+    try:
+        assert len(sys.argv) > 1
+        projectPath = sys.argv[1]
+
+    except AssertionError:
+        print "You can specify the project path as an argument when launching\
+            this script"
+        print "Project path not defined, will take current folder by default"
+        projectPath       = './'
+
     projectFiles      = getProjectFiles(projectPath)
     classesDict       = extractProjectClasses(projectFiles)
     dependencies      = extractProjectDependencies(classesDict)
