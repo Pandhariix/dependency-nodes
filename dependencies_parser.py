@@ -47,11 +47,22 @@ COLORS = {
                 "unittest_class":'#77E58B',
                 "module"        :'#F7BB7B'
             },
-            "highlights": {
-                "background": '#D2E5FF'
+            "highlight": {
+                "background": '#D2E5FF',
+                "border"    : {
+                    "basic_class"   :'#2B7CE9',
+                    "mother_class"  :'#2B7CE9',
+                    "unittest_class":'#77E58B',
+                    "module"        :'#F7BB7B'
+                }
             }
         },
-        "edges": "#2B7CE9"
+        "edges": {
+            "color": {
+                "color"    : "#2B7CE9",
+                "highlight": '#97C2FC'
+            }
+        }
     }
 }
 
@@ -367,8 +378,9 @@ def computeNodesAndEdges(dependencies):
 
     for language in dependencies.keys():
         for className in dependencies[language].keys():
-            nodeDict          = dict()
-            nodeDict["color"] = dict()
+            nodeDict                       = dict()
+            nodeDict["color"]              = dict()
+            nodeDict["color"]["highlight"] = dict()
             nodeDict["id"]    = CLASS_ID
             nodeDict["group"] = language
             CLASS_ID         += 1
@@ -378,10 +390,10 @@ def computeNodesAndEdges(dependencies):
                                                     ["nodes"]\
                                                     ["background"]
 
-            nodeDict["color"]["highlight"]  = COLORS[language]\
-                                                    ["nodes"]\
-                                                    ["highlights"]\
-                                                    ["background"]
+            nodeDict["color"]["highlight"]["background"] = COLORS[language]\
+                                                           ["nodes"]\
+                                                           ["highlight"]\
+                                                           ["background"]
 
             # Analyse the class name to know if it is a module
             if dependencies[language][className] is None:
@@ -390,6 +402,12 @@ def computeNodesAndEdges(dependencies):
                                                     ["nodes"]\
                                                     ["border"]\
                                                     ["module"]
+
+                nodeDict["color"]["highlight"]["border"] = COLORS[language]\
+                                                                  ["nodes"]\
+                                                                  ["highlight"]\
+                                                                  ["border"]\
+                                                                  ["module"]
 
             # Analyse the class name and clean it if there is a () in the name
             else:
@@ -403,11 +421,25 @@ def computeNodesAndEdges(dependencies):
                                                             ["border"]\
                                                             ["unittest_class"]
 
+                        nodeDict["color"]["highlight"]["border"] = COLORS\
+                                                                   [language]\
+                                                                   ["nodes"]\
+                                                                   ["highlight"]\
+                                                                   ["border"]\
+                                                                   ["unittest_class"]
+
                     else:
                         nodeDict["color"]["border"] = COLORS[language]\
                                                             ["nodes"]\
                                                             ["border"]\
                                                             ["basic_class"]
+
+                        nodeDict["color"]["highlight"]["border"] = COLORS\
+                                                                   [language]\
+                                                                   ["nodes"]\
+                                                                   ["highlight"]\
+                                                                   ["border"]\
+                                                                   ["basic_class"]
 
                 # Standard basic class
                 else:
@@ -415,6 +447,13 @@ def computeNodesAndEdges(dependencies):
                                                         ["nodes"]\
                                                         ["border"]\
                                                         ["basic_class"]
+
+                nodeDict["color"]["highlight"]["border"] = COLORS\
+                                                           [language]\
+                                                           ["nodes"]\
+                                                           ["highlight"]\
+                                                           ["border"]\
+                                                           ["basic_class"]
 
             nodeDict["label"] = className
 
@@ -445,8 +484,18 @@ def computeNodesAndEdges(dependencies):
 
                 edgeDict["from"]  = nodeDict["id"]
                 edgeDict["to"]    = dependencyClassId
-                edgeDict["value"] = 2
-                edgeDict["color"] = COLORS[language]["edges"]
+                # edgeDict["value"] = 2
+
+                edgeDict["color"]              = dict()
+                edgeDict["color"]["color"]     = COLORS[language]\
+                                                       ["edges"]\
+                                                       ["color"]\
+                                                       ["color"]
+
+                edgeDict["color"]["highlight"] = COLORS[language]\
+                                                       ["edges"]\
+                                                       ["color"]\
+                                                       ["highlight"]
 
                 edges.append(edgeDict)
 
@@ -506,7 +555,7 @@ def dumpJson(dictionnary):
 # TODO : compute inheritance
 
 def main():
-    projectPath       = '../ARIIA'
+    projectPath       = '../apps/Hopias/python_structure/Hopias'
     projectFiles      = getProjectFiles(projectPath)
     classesDict       = extractProjectClasses(projectFiles)
     dependencies      = extractProjectDependencies(classesDict)

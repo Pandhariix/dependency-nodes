@@ -96,7 +96,11 @@ SOFTWARE.
 
       var options = {
         physics: {
-          stabilization: false
+          stabilization: false,
+          barnesHut: {
+            centralGravity: 0.1,
+            avoidOverlap  : 0.1
+          }
         },
         nodes: {
           shape: 'dot',
@@ -111,10 +115,8 @@ SOFTWARE.
           },
           borderWidth: 4
         },
-        "edges": {
-          "smooth": {
-            "forceDirection": "none"
-          }
+        edges: {
+          width: 3
         }
       };
 
